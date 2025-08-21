@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner App</title>
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- --- Embedded CSS --- -->
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Use a modern font and a new, vibrant background */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #f0f4f8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 100px; /* Add padding to prevent nav overlap */
+        }
+
+        /* Main container */
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Header styling */
+        header {
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            color: #a7c0e0;
+            font-weight: 400;
+        }
+
+        /* Main content area */
+        main {
+            padding-bottom: 100px; /* Space for the bottom nav */
+        }
+
+        /* Grid for the feature cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        /* --- Big, Attractive Feature Cards --- */
+        .feature-card {
+            background: rgba(255, 255, 255, 0.08); /* Frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Engaging Hover Effect --- */
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card i {
+            font-size: 3.5rem; /* Larger icons */
+            margin-bottom: 25px;
+            display: block;
+            color: #ffffff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .feature-card h3 {
+            font-size: 1.75rem; /* Larger title */
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #dbe2f0;
+            opacity: 0.9;
+        }
+
+        /* Bottom navigation bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 32, 58, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #a7c0e0;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            min-width: 70px;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item i {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .nav-item span {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2.5rem;
+            }
+            .feature-grid {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>QR App By Azam</h1>
+            <p>Your complete QR code toolkit</p>
+        </header>
+
+        <main>
+            <!-- The main feature buttons -->
+            <div class="feature-grid">
+                <div class="feature-card" onclick="navigateTo('/scanner')">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Scan Code</h3>
+                    <p>Use your camera to scan any QR code instantly.</p>
+                </div>
+
+                <div class="feature-card" onclick="navigateTo('/generator')">
+                    <i class="fas fa-magic-wand-sparkles"></i>
+                    <h3>Generate Code</h3>
+                    <p>Create custom QR codes for websites, text, and more.</p>
+                </div>
+
+                <div class="feature-card" onclick="navigateTo('/history')">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <h3>View History</h3>
+                    <p>Access all your previously scanned and created codes.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom navigation bar remains for app-like feel -->
+        <nav class="bottom-nav">
+            <a href="/" class="nav-item active">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/scanner" class="nav-item">
+                <i class="fas fa-camera"></i>
+                <span>Scan</span>
+            </a>
+            <a href="/generator" class="nav-item">
+                <i class="fas fa-plus-square"></i>
+                <span>Generate</span>
+            </a>
+            <a href="/history" class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        // Updated navigation logic
+        function navigateTo(path) {
+            // This will now redirect the user to the specified path
+            window.location.href = path;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - QR Scanner App</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-history"></i> History</h1>
+            <p>Your QR scan and generation history</p>
+        </header>
+
+        <main>
+            <div class="history-controls">
+                <div class="filter-tabs">
+                    <button class="filter-btn active" data-filter="all">
+                        <i class="fas fa-list"></i> All
+                    </button>
+                    <button class="filter-btn" data-filter="scan">
+                        <i class="fas fa-camera"></i> Scans
+                    </button>
+                    <button class="filter-btn" data-filter="generate">
+                        <i class="fas fa-plus-square"></i> Generated
+                    </button>
+                </div>
+                
+                <div class="history-actions">
+                    <button id="clear-history" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                    <button id="refresh-history" class="btn btn-secondary">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div id="stats-section" class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-list"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="total-records">0</span>
+                            <span class="stat-label">Total Records</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-camera"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="total-scans">0</span>
+                            <span class="stat-label">Scans</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-plus-square"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="total-generations">0</span>
+                            <span class="stat-label">Generated</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History List -->
+            <div id="history-list" class="history-list">
+                <!-- History items will be dynamically loaded here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <i class="fas fa-history"></i>
+                <h3>No History Yet</h3>
+                <p>Start scanning or generating QR codes to see your history here.</p>
+                <div class="empty-actions">
+                    <a href="/scanner" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Start Scanning
+                    </a>
+                    <a href="/generator" class="btn btn-success">
+                        <i class="fas fa-plus-square"></i> Generate QR Code
+                    </a>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading history...</span>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="/" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/scanner" class="nav-item">
+                <i class="fas fa-camera"></i>
+                <span>Scan</span>
+            </a>
+            <a href="/generator" class="nav-item">
+                <i class="fas fa-plus-square"></i>
+                <span>Generate</span>
+            </a>
+            <a href="/history" class="nav-item active">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+        </nav>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/history.js"></script>
+</body>
+</html>

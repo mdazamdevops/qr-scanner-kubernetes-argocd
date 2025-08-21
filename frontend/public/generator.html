@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Generator - QR Scanner App</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-plus-square"></i> QR Generator</h1>
+            <p>Generate custom QR codes from text or data</p>
+        </header>
+
+        <main>
+            <div class="generator-form">
+                <div class="input-section">
+                    <label for="qr-text">Enter text or data to encode:</label>
+                    <textarea id="qr-text" placeholder="Enter text, URL, email, phone number, or any data you want to encode..."></textarea>
+                    
+                    <div class="presets">
+                        <h4>Quick Presets:</h4>
+                        <div class="preset-buttons">
+                            <button class="preset-btn" data-preset="url">
+                                <i class="fas fa-link"></i> URL
+                            </button>
+                            <button class="preset-btn" data-preset="email">
+                                <i class="fas fa-envelope"></i> Email
+                            </button>
+                            <button class="preset-btn" data-preset="phone">
+                                <i class="fas fa-phone"></i> Phone
+                            </button>
+                            <button class="preset-btn" data-preset="sms">
+                                <i class="fas fa-sms"></i> SMS
+                            </button>
+                            <button class="preset-btn" data-preset="wifi">
+                                <i class="fas fa-wifi"></i> WiFi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options-section">
+                    <h4>Options:</h4>
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label for="qr-size">Size:</label>
+                            <select id="qr-size">
+                                <option value="200,200">Small (200x200)</option>
+                                <option value="300,300" selected>Medium (300x300)</option>
+                                <option value="400,400">Large (400x400)</option>
+                                <option value="500,500">Extra Large (500x500)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="option-group">
+                            <label for="error-correction">Error Correction:</label>
+                            <select id="error-correction">
+                                <option value="L">Low (~7%)</option>
+                                <option value="M" selected>Medium (~15%)</option>
+                                <option value="Q">Quartile (~25%)</option>
+                                <option value="H">High (~30%)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="option-group">
+                            <label for="border-size">Border:</label>
+                            <select id="border-size">
+                                <option value="1">Thin</option>
+                                <option value="4" selected>Normal</option>
+                                <option value="8">Thick</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="generate-btn" class="btn btn-primary">
+                    <i class="fas fa-magic"></i> Generate QR Code
+                </button>
+            </div>
+
+            <!-- Generated QR Code -->
+            <div id="generated-qr" class="qr-result" style="display: none;">
+                <h3><i class="fas fa-check-circle"></i> Generated QR Code</h3>
+                <div class="qr-display">
+                    <img id="qr-image" alt="Generated QR Code">
+                    <div class="qr-info">
+                        <div id="qr-content-info"></div>
+                        <div class="qr-actions">
+                            <button id="download-btn" class="btn btn-success">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                            <button id="copy-btn" class="btn btn-secondary">
+                                <i class="fas fa-copy"></i> Copy Image
+                            </button>
+                            <button id="share-btn" class="btn btn-info">
+                                <i class="fas fa-share"></i> Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Generating QR Code...</span>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="/" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/scanner" class="nav-item">
+                <i class="fas fa-camera"></i>
+                <span>Scan</span>
+            </a>
+            <a href="/generator" class="nav-item active">
+                <i class="fas fa-plus-square"></i>
+                <span>Generate</span>
+            </a>
+            <a href="/history" class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+        </nav>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/generator.js"></script>
+</body>
+</html>

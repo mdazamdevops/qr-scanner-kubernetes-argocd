@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - QR Scanner App</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-camera"></i> QR Scanner</h1>
+            <p>Scan QR codes using camera or upload image</p>
+        </header>
+
+        <main>
+            <div class="scanner-modes">
+                <button class="mode-btn active" data-mode="camera">
+                    <i class="fas fa-camera"></i> Camera
+                </button>
+                <button class="mode-btn" data-mode="file">
+                    <i class="fas fa-upload"></i> Upload File
+                </button>
+            </div>
+
+            <!-- Camera Scanner -->
+            <div id="camera-scanner" class="scanner-section">
+                <div class="camera-container">
+                    <video id="video" autoplay muted playsinline></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    <div class="camera-overlay">
+                        <div class="scan-frame"></div>
+                        <div class="scan-line"></div>
+                    </div>
+                </div>
+                
+                <div class="camera-controls">
+                    <button id="start-camera" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Camera
+                    </button>
+                    <button id="stop-camera" class="btn btn-secondary" style="display: none;">
+                        <i class="fas fa-stop"></i> Stop Camera
+                    </button>
+                    <button id="capture-btn" class="btn btn-success" style="display: none;">
+                        <i class="fas fa-camera"></i> Capture
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Scanner -->
+            <div id="file-scanner" class="scanner-section" style="display: none;">
+                <div class="file-upload-area" id="file-drop-area">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag and drop an image file here or click to browse</p>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click();">
+                        <i class="fas fa-folder-open"></i> Choose File
+                    </button>
+                </div>
+                
+                <div id="file-preview" class="file-preview" style="display: none;">
+                    <img id="preview-image" alt="Preview">
+                    <div class="file-info">
+                        <span id="file-name"></span>
+                        <button class="btn btn-success" onclick="scanFromFile()">
+                            <i class="fas fa-search"></i> Scan QR Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="scan-results" class="results-section" style="display: none;">
+                <h3><i class="fas fa-check-circle"></i> Scan Results</h3>
+                <div id="results-container"></div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Scanning...</span>
+            </div>
+        </main>
+
+        <nav class="bottom-nav">
+            <a href="/" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="/scanner" class="nav-item active">
+                <i class="fas fa-camera"></i>
+                <span>Scan</span>
+            </a>
+            <a href="/generator" class="nav-item">
+                <i class="fas fa-plus-square"></i>
+                <span>Generate</span>
+            </a>
+            <a href="/history" class="nav-item">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+        </nav>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/scanner.js"></script>
+</body>
+</html>
