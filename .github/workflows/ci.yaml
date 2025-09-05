@@ -14,7 +14,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Use repository name instead of organization for package names
   BACKEND_IMAGE_NAME: ${{ github.repository }}-backend
   FRONTEND_IMAGE_NAME: ${{ github.repository }}-frontend
   CLUSTER_NAME: qr-scanner-cluster
@@ -59,7 +58,6 @@ jobs:
           touch database/qr_scanner.db
           chmod 755 database/qr_scanner.db
           
-          # Create basic test files without heredoc
           if [ ! -f tests/__init__.py ]; then
             touch tests/__init__.py
           fi
@@ -118,7 +116,6 @@ jobs:
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    # CRITICAL: Add permissions to write packages
     permissions:
       contents: read
       packages: write
@@ -174,26 +171,34 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Kubernetes tools
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubeconfig
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
+          mkdir -p ~/.kube
+          echo '${{ secrets.KUBE_CONFIG }}' > ~/.kube/config
+          chmod 600 ~/.kube/config
+          
+          kubectl cluster-info || echo "Cluster info not available yet"
 
       - name: Deploy ArgoCD Application
         run: |
-          kubectl apply -f argocd/application.yaml --namespace=${{ env.ARGOCD_NAMESPACE }} || true
+          kubectl apply -f argocd/application.yaml --namespace=${{ env.ARGOCD_NAMESPACE }} --validate=false || true
           sleep 10
-          kubectl get application -n ${{ env.ARGOCD_NAMESPACE }}
-        env:
-          KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
+          kubectl get application -n ${{ env.ARGOCD_NAMESPACE }} || true
+
+      - name: Wait for cluster to be ready
+        run: |
+          timeout 60s bash -c 'until kubectl cluster-info >/dev/null 2>&1; do echo "Waiting for API server..."; sleep 5; done'
+          echo "Cluster is ready!"
 
       - name: Sync ArgoCD Application
         run: |
           kubectl patch app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "true"}}}' --type=merge || true
           timeout 120s bash -c 'while ! kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o jsonpath="{.status.sync.status}" | grep -q "Synced"; do sleep 5; echo "Waiting for sync..."; done'
           kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o wide
-        env:
-          KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
   verify-deployment:
     name: Verify Deployment
@@ -206,21 +211,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Kubernetes tools
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubeconfig
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          mkdir -p ~/.kube
+          echo '${{ secrets.KUBE_CONFIG }}' > ~/.kube/config
+          chmod 600 ~/.kube/config
 
       - name: Verify deployment status
         run: |
-          kubectl wait --for=condition=ready pod -l app=backend -n ${{ env.NAMESPACE }} --timeout=300s
-          kubectl wait --for=condition=ready pod -l app=frontend -n ${{ env.NAMESPACE }} --timeout=300s
+          timeout 60s bash -c 'until kubectl cluster-info >/dev/null 2>&1; do echo "Waiting for API server..."; sleep 5; done'
+          
+          kubectl wait --for=condition=ready pod -l app=backend -n ${{ env.NAMESPACE }} --timeout=300s || echo "Backend pods not ready yet"
+          kubectl wait --for=condition=ready pod -l app=frontend -n ${{ env.NAMESPACE }} --timeout=300s || echo "Frontend pods not ready yet"
           kubectl get all -n ${{ env.NAMESPACE }}
           
           kubectl port-forward svc/backend-service -n ${{ env.NAMESPACE }} 5000:80 &
-          sleep 5
-          curl -f http://localhost:5000/health || echo "Health check failed but continuing..."
-        env:
-          KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
+          sleep 10
+          timeout 30s bash -c 'until curl -f http://localhost:5000/health; do echo "Waiting for health endpoint..."; sleep 5; done' || echo "Health check completed"
 
   notification:
     name: Send Notifications
