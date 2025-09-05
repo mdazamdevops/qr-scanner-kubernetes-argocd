@@ -1,147 +1,73 @@
-name: QR Scanner CI/CD Pipeline
+import sqlite3
+import json
+from datetime import datetime
+from config import Config
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-jobs:
-  test-backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-
-    - name: Install system dependencies
-      run: sudo apt-get update && sudo apt-get install -y libzbar0
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov
-
-    - name: Run tests
-      env:
-        # Use a temporary file in a writable runner directory for the test database.
-        # This is a more reliable method than an in-memory database URI.
-        DATABASE_URL: ${{ runner.temp }}/test_database.db
-      run: python -m pytest tests/ -v --cov=.
-
-  test-frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: './frontend/package-lock.json'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run tests
-      run: npm test
-
-  build-and-push:
-    needs: [test-backend, test-frontend]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Extract metadata for Docker
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
-        tags: |
-          type=sha,prefix=,suffix=-{{sha}}
-          type=ref,event=branch
-          type=ref,event=tag
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-
-    - name: Build and push Backend
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend
-        push: true
-        tags: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Build and push Frontend
-      uses: docker/build-push-action@v4
-      with:
-        context: ./frontend
-        push: true
-        tags: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  deploy-staging:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+class QRHistory:
+    def __init__(self):
+        self.db_path = Config.DATABASE_PATH
+        self.init_db()
     
-    steps:
-    - uses: actions/checkout@v4
+    def init_db(self):
+        """Initialize the database with required tables"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS qr_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT NOT NULL,  -- 'scan' or 'generate'
+                    content TEXT NOT NULL,
+                    data TEXT,  -- JSON string for additional data
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
     
-    - name: Deploy to Staging
-      uses: steebchen/kubectl@v2.0.0
-      with:
-        config: ${{ secrets.KUBE_CONFIG_STAGING }}
-        command: apply -k kubernetes/overlays/staging
-      env:
-        KUBECONFIG: ${{ secrets.KUBE_CONFIG_STAGING }}
-
-  deploy-production:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    def add_record(self, record_type, content, data=None):
+        """Add a new record to history"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO qr_history (type, content, data)
+                VALUES (?, ?, ?)
+            ''', (record_type, content, json.dumps(data) if data else None))
+            conn.commit()
+            return cursor.lastrowid
     
-    steps:
-    - uses: actions/checkout@v4
+    def get_history(self, limit=50):
+        """Get recent history records"""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM qr_history 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            ''', (limit,))
+            records = cursor.fetchall()
+            
+            # Convert to list of dictionaries
+            history = []
+            for record in records:
+                item = dict(record)
+                if item['data']:
+                    item['data'] = json.loads(item['data'])
+                history.append(item)
+            
+            return history
     
-    - name: Deploy to Production
-      uses: steebchen/kubectl@v2.0.0
-      with:
-        config: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
-        command: apply -k kubernetes/overlays/production
-      env:
-        KUBECONFIG: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
-
+    def delete_record(self, record_id):
+        """Delete a specific record"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM qr_history WHERE id = ?', (record_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def clear_history(self):
+        """Clear all history records"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM qr_history')
+            conn.commit()
+            return cursor.rowcount
