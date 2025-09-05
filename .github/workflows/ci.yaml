@@ -35,7 +35,11 @@ jobs:
         pip install pytest pytest-cov
 
     - name: Run tests
-      run: python -m pytest tests/ -v --cov=.
+      run: |
+        # Create directory for the database to prevent "unable to open" error
+        # Replace 'instance' if your app uses a different directory for the DB
+        mkdir -p instance
+        python -m pytest tests/ -v --cov=.
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -140,3 +144,4 @@ jobs:
         command: apply -k kubernetes/overlays/production
       env:
         KUBECONFIG: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+
