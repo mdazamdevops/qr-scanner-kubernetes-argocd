@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: qr-scanner-app
+  labels:
+    app: backend
+    component: python-flask
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        component: python-flask
+    spec:
+      containers:
+      - name: backend
+        image: your-registry/backend:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: DATABASE_URL
+          value: "sqlite:///app/database/qr_scanner.db"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: database-storage
+          mountPath: /app/database
+      volumes:
+      - name: database-storage
+        emptyDir: {}

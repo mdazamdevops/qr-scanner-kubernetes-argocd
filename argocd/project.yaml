@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: qr-scanner-project
+  namespace: argocd
+  labels:
+    app: argocd
+    project: qr-scanner
+spec:
+  description: "QR Scanner Application Project"
+  sourceRepos:
+  - '*'
+  destinations:
+  - namespace: qr-scanner-app
+    server: https://kubernetes.default.svc
+  - namespace: argocd
+    server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: 'rbac.authorization.k8s.io'
+    kind: ClusterRole
+  - group: 'rbac.authorization.k8s.io'
+    kind: ClusterRoleBinding
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  roles:
+  - name: admin
+    description: Project Admin
+    policies:
+    - p, proj:qr-scanner-project:admin, applications, *, qr-scanner-app/*, allow
+    - p, proj:qr-scanner-project:admin, applications, get, qr-scanner-app/*, allow
+    - p, proj:qr-scanner-project:admin, applications, create, qr-scanner-app/*, allow
+    - p, proj:qr-scanner-project:admin, applications, update, qr-scanner-app/*, allow
+    - p, proj:qr-scanner-project:admin, applications, delete, qr-scanner-app/*, allow
+    - p, proj:qr-scanner-project:admin, applications, sync, qr-scanner-app/*, allow
+    - p, proj:qr-scanner-project:admin, applications, override, qr-scanner-app/*, allow
+  - name: read-only
+    description: Read Only Access
+    policies:
+    - p, proj:qr-scanner-project:read-only, applications, get, qr-scanner-app/*, allow
+  orphanedResources:
+    warn: true
+  syncWindows:
+  - kind: allow
+    schedule: '0 0 * * *'
+    duration: '1h'
+    applications:
+    - '*'
+  - kind: deny
+    schedule: '0 23 * * *'
+    duration: '8h'
+    applications:
+    - '*'

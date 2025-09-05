@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: qr-scanner-app
+
+resources:
+- ../../base
+
+patchesStrategicMerge:
+- backend-patch.yaml
+- frontend-patch.yaml
+- service-patch.yaml
+
+images:
+- name: your-registry/backend
+  newName: your-registry/backend
+  newTag: v1.0.0
+- name: your-registry/frontend
+  newName: your-registry/frontend
+  newTag: v1.0.0
+
+configMapGenerator:
+- name: app-config
+  behavior: merge
+  literals:
+  - environment=production
+  - log-level=info
+  - app-version=v1.0.0
+  - database-url=postgresql://user:pass@production-db:5432/qrscanner
+
+secretGenerator:
+- name: app-secrets
+  behavior: merge
+  literals:
+  - secret-key=prod-super-secret-key-123
+  - session-secret=session-secret-key-for-prod
+  - admin-password=prod-admin-password
+
+vars:
+- name: APP_VERSION
+  objref:
+    kind: ConfigMap
+    name: app-config
+    apiVersion: v1
+  fieldref:
+    fieldpath: data.app-version

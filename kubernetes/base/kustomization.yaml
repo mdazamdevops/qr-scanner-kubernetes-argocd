@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: qr-scanner-app
+
+resources:
+- namespace.yaml
+- backend-deployment.yaml
+- backend-service.yaml
+- frontend-deployment.yaml
+- frontend-service.yaml
+- ingress.yaml
+- configmap.yaml
+- secret.yaml
+- pvc.yaml
+- service-account.yaml
+# Remove hpa.yaml for now if causing issues
+
+# Use the old commonLabels format (deprecated but works)
+commonLabels:
+  app: qr-scanner-app
+  environment: base
+  managed-by: kustomize
+
+# Use the old commonAnnotations format  
+commonAnnotations:
+  description: "QR Scanner Application Deployment"
+  version: "1.0.0"
+
+images:
+- name: your-registry/backend
+  newName: your-registry/backend
+  newTag: latest
+- name: your-registry/frontend
+  newName: your-registry/frontend
+  newTag: latest

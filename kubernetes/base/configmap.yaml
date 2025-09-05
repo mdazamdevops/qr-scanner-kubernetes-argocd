@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: qr-scanner-app
+  labels:
+    app: qr-scanner-app
+    environment: base
+data:
+  database-url: "sqlite:///app/database/qr_scanner.db"
+  environment: "production"
+  app-name: "QR Scanner App"
+  log-level: "info"
+  flask-env: "production"
+  node-env: "production"

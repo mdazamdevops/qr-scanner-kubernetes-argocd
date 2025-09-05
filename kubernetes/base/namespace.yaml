@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qr-scanner-app
+  labels:
+    name: qr-scanner-app
+    environment: production
+    app: qr-scanner
