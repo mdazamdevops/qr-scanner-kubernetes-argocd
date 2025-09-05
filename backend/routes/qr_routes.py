@@ -4,6 +4,16 @@ from utils.file_handler import FileHandler
 from models.qr_history import QRHistory
 
 qr_bp = Blueprint('qr', __name__)
+
+# Don't initialize here - initialize when needed
+qr_history = QRHistory()
+
+@qr_bp.route('/scan', methods=['POST'])
+def scan_qr():
+    # Initialize database only when actually used
+    conn = qr_history.get_connection()
+
+qr_bp = Blueprint('qr', __name__)
 qr_history = QRHistory()
 
 @qr_bp.route('/scan/file', methods=['POST'])
