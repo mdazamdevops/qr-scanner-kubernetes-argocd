@@ -2,52 +2,38 @@ import pytest
 import os
 import tempfile
 import sqlite3
-from app import app as flask_app
+from unittest.mock import patch, MagicMock
 
-@pytest.fixture
-def app():
-    """Create app with test configuration"""
-    # Create temporary database for tests
-    db_fd, db_path = tempfile.mkstemp()
+# Mock database before importing app to prevent circular imports
+with patch('sqlite3.connect') as mock_connect:
+    mock_conn = MagicMock()
+    mock_connect.return_value = mock_conn
     
-    flask_app.config['TESTING'] = True
-    flask_app.config['DATABASE_URL'] = f'sqlite:///{db_path}'
-    
-    # Create test database
-    with flask_app.app_context():
-        # Initialize test database
-        conn = sqlite3.connect(db_path)
-        # Create necessary tables
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
-            )
-        ''')
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS qr_scans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                qr_data TEXT,
-                scan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        conn.commit()
-        conn.close()
-    
-    yield flask_app
-    
-    # Clean up
-    os.close(db_fd)
-    os.unlink(db_path)
+    from app import app
 
-@pytest.fixture
-def client(app):
-    """Create test client"""
-    return app.test_client()
+@pytest.fixture(scope='function')
+def client():
+    """Create test client with mocked database"""
+    app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for testing
+    
+    # Mock the database connection for all tests
+    with patch('models.qr_history.sqlite3.connect') as mock_connect:
+        mock_conn = MagicMock()
+        mock_connect.return_value = mock_conn
+        
+        # Mock database initialization
+        mock_conn.execute.return_value = None
+        mock_conn.commit.return_value = None
+        
+        with app.test_client() as client:
+            yield client
 
-@pytest.fixture
-def runner(app):
-    """Create CLI runner"""
-    return app.test_cli_runner()
+@pytest.fixture(scope='function')
+def auth_client(client):
+    """Create authenticated test client"""
+    # Mock session authentication
+    with client.session_transaction() as session:
+        session['user_id'] = 1
+        session['username'] = 'testuser'
+    return client
