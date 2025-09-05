@@ -3,10 +3,12 @@ kind: Application
 metadata:
   name: qr-scanner-app
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-username/qr-scanner-app.git
+    repoURL: https://github.com/mdazamdevops/qr-scanner-kubernetes-argocd.git
     targetRevision: HEAD
     path: kubernetes/base
   destination:
@@ -17,4 +19,4 @@ spec:
       selfHeal: true
       prune: true
     syncOptions:
-    - CreateNamespace=true
+      - CreateNamespace=true
