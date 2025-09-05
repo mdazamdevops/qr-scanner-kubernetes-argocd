@@ -236,7 +236,6 @@ jobs:
           echo "Run these commands on your Ubuntu machine to get the values:"
           echo ""
           echo "```bash"
-          echo "# Get base64 encoded certificates"
           echo "cat ~/.minikube/ca.crt | base64 -w 0"
           echo "cat ~/.minikube/profiles/minikube/client.crt | base64 -w 0"
           echo "cat ~/.minikube/profiles/minikube/client.key | base64 -w 0"
@@ -321,41 +320,35 @@ jobs:
     if: always()
 
     steps:
-      - name: Send success notification
+      - name: Check workflow status
+        id: check-status
+        run: |
+          # Check if setup-minikube job succeeded and has output
+          if [ "${{ needs.setup-minikube.result }}" = "success" ] && [ "${{ needs.setup-minikube.outputs.kubeconfig_available }}" = "true" ]; then
+            echo "kubeconfig_status=available" >> $GITHUB_ENV
+          else
+            echo "kubeconfig_status=missing" >> $GITHUB_ENV
+          fi
+
+      - name: Log success status
         if: success()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ CI/CD pipeline completed successfully! Images built and pushed to GHCR.'
-            })
+        run: |
+          echo "✅ CI/CD pipeline completed successfully!"
+          echo "Images built and pushed to GHCR"
+          echo "Workflow: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "${{ env.kubeconfig_status }}" = "missing" ]; then
+            echo "⚠️ Setup required: Add Minikube secrets to GitHub Secrets"
+            echo "Required: MINIKUBE_CA_CRT, MINIKUBE_CLIENT_CRT, MINIKUBE_CLIENT_KEY"
+          fi
 
-      - name: Send failure notification
+      - name: Log failure status
         if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ CI/CD pipeline failed! Check workflow run for details.'
-            })
-
-      - name: Send setup reminder
-        if: needs.setup-minikube.outputs.kubeconfig_available == 'false'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '⚠️ Setup required: Please add Minikube certificate secrets to GitHub Secrets (MINIKUBE_CA_CRT, MINIKUBE_CLIENT_CRT, MINIKUBE_CLIENT_KEY). Run the commands from the workflow logs to get the values.'
-            })
+        run: |
+          echo "❌ CI/CD pipeline failed!"
+          echo "Check details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "${{ env.kubeconfig_status }}" = "missing" ]; then
+            echo "⚠️ Also: Minikube secrets are missing from GitHub Secrets"
+          fi
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
