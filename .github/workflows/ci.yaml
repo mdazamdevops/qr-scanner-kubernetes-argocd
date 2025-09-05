@@ -14,8 +14,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE_NAME: ${{ github.repository }}-backend
-  FRONTEND_IMAGE_NAME: ${{ github.repository }}-frontend
+  IMAGE_NAME: ${{ github.repository }}
   CLUSTER_NAME: qr-scanner-cluster
   NAMESPACE: qr-scanner-app
   ARGOCD_NAMESPACE: argocd
@@ -29,53 +28,54 @@ jobs:
         working-directory: ./backend
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: './backend/requirements.txt'
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        cache-dependency-path: './backend/requirements.txt'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libzbar0 libzbar-dev
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libzbar0 libzbar-dev
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov flask-testing
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov flask-testing
 
-      - name: Create test directory structure
-        run: |
-          mkdir -p tests database
-          touch database/qr_scanner.db
-          chmod 755 database/qr_scanner.db
-          
-          if [ ! -f tests/__init__.py ]; then
-            touch tests/__init__.py
-          fi
-          if [ ! -f tests/test_smoke.py ]; then
-            echo "def test_basic():" > tests/test_smoke.py
-            echo "    assert 1 + 1 == 2" >> tests/test_smoke.py
-          fi
+    - name: Create test directory structure
+      run: |
+        mkdir -p tests database
+        touch database/qr_scanner.db
+        chmod 755 database/qr_scanner.db
+        
+        # Create basic test files without heredoc
+        if [ ! -f tests/__init__.py ]; then
+          touch tests/__init__.py
+        fi
+        if [ ! -f tests/test_smoke.py ]; then
+          echo "def test_basic():" > tests/test_smoke.py
+          echo "    assert 1 + 1 == 2" >> tests/test_smoke.py
+        fi
 
-      - name: Run tests with coverage
-        run: |
-          export TESTING=true
-          python -m pytest tests/ -v --cov=. --cov-report=xml --tb=short || echo "Tests completed"
+    - name: Run tests with coverage
+      run: |
+        export TESTING=true
+        python -m pytest tests/ -v --cov=. --cov-report=xml --tb=short || echo "Tests completed"
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./backend/coverage.xml
-          flags: backend_unittests
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./backend/coverage.xml
+        flags: backend_unittests
 
   test-frontend:
     name: Test Frontend
@@ -85,80 +85,88 @@ jobs:
         working-directory: ./frontend
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+    - name: Set up Node.js 20
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Run security audit
-        run: npm audit --audit-level moderate || true
+    - name: Run security audit
+      run: npm audit --audit-level moderate || true
 
-      - name: Run tests
-        run: |
-          mkdir -p tests
-          echo "test('basic test', () => { expect(1 + 1).toBe(2); });" > tests/example.test.js
-          
-          if ! npm list jest >/dev/null 2>&1; then
-            npm install --save-dev jest
-          fi
-          npx jest --passWithNoTests --coverage
+    - name: Run tests
+      run: |
+        mkdir -p tests
+        echo "test('basic test', () => { expect(1 + 1).toBe(2); });" > tests/example.test.js
+        
+        if ! npm list jest >/dev/null 2>&1; then
+          npm install --save-dev jest
+        fi
+        npx jest --passWithNoTests --coverage
 
   build-and-scan:
     name: Build and Scan Images
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    permissions:
-      contents: read
-      packages: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Backend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag
+          type=sha,format=long
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push Frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+    - name: Build and push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
+
+    - name: Build and push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
 
   deploy-argocd:
     name: Deploy to ArgoCD
@@ -167,38 +175,30 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Kubernetes tools
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
+    - name: Set up Kubernetes tools
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        kubectl version --client
 
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo '${{ secrets.KUBE_CONFIG }}' > ~/.kube/config
-          chmod 600 ~/.kube/config
-          
-          kubectl cluster-info || echo "Cluster info not available yet"
+    - name: Deploy ArgoCD Application
+      run: |
+        kubectl apply -f argocd/application.yaml --namespace=${{ env.ARGOCD_NAMESPACE }} || true
+        sleep 10
+        kubectl get application -n ${{ env.ARGOCD_NAMESPACE }}
+      env:
+        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
-      - name: Deploy ArgoCD Application
-        run: |
-          kubectl apply -f argocd/application.yaml --namespace=${{ env.ARGOCD_NAMESPACE }} --validate=false || true
-          sleep 10
-          kubectl get application -n ${{ env.ARGOCD_NAMESPACE }} || true
-
-      - name: Wait for cluster to be ready
-        run: |
-          timeout 60s bash -c 'until kubectl cluster-info >/dev/null 2>&1; do echo "Waiting for API server..."; sleep 5; done'
-          echo "Cluster is ready!"
-
-      - name: Sync ArgoCD Application
-        run: |
-          kubectl patch app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "true"}}}' --type=merge || true
-          timeout 120s bash -c 'while ! kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o jsonpath="{.status.sync.status}" | grep -q "Synced"; do sleep 5; echo "Waiting for sync..."; done'
-          kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o wide
+    - name: Sync ArgoCD Application
+      run: |
+        kubectl patch app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "true"}}}' --type=merge || true
+        timeout 120s bash -c 'while ! kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o jsonpath="{.status.sync.status}" | grep -q "Synced"; do sleep 5; echo "Waiting for sync..."; done'
+        kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o wide
+      env:
+        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
   verify-deployment:
     name: Verify Deployment
@@ -207,31 +207,25 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Kubernetes tools
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
+    - name: Set up Kubernetes tools
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo '${{ secrets.KUBE_CONFIG }}' > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Verify deployment status
-        run: |
-          timeout 60s bash -c 'until kubectl cluster-info >/dev/null 2>&1; do echo "Waiting for API server..."; sleep 5; done'
-          
-          kubectl wait --for=condition=ready pod -l app=backend -n ${{ env.NAMESPACE }} --timeout=300s || echo "Backend pods not ready yet"
-          kubectl wait --for=condition=ready pod -l app=frontend -n ${{ env.NAMESPACE }} --timeout=300s || echo "Frontend pods not ready yet"
-          kubectl get all -n ${{ env.NAMESPACE }}
-          
-          kubectl port-forward svc/backend-service -n ${{ env.NAMESPACE }} 5000:80 &
-          sleep 10
-          timeout 30s bash -c 'until curl -f http://localhost:5000/health; do echo "Waiting for health endpoint..."; sleep 5; done' || echo "Health check completed"
+    - name: Verify deployment status
+      run: |
+        kubectl wait --for=condition=ready pod -l app=backend -n ${{ env.NAMESPACE }} --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=frontend -n ${{ env.NAMESPACE }} --timeout=300s
+        kubectl get all -n ${{ env.NAMESPACE }}
+        
+        kubectl port-forward svc/backend-service -n ${{ env.NAMESPACE }} 5000:80 &
+        sleep 5
+        curl -f http://localhost:5000/health || echo "Health check failed but continuing..."
+      env:
+        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
   notification:
     name: Send Notifications
@@ -240,29 +234,29 @@ jobs:
     if: always()
 
     steps:
-      - name: Send success notification
-        if: success()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ GitOps deployment successful! Application deployed via ArgoCD.'
-            })
+    - name: Send success notification
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ GitOps deployment successful! Application deployed via ArgoCD.'
+          })
 
-      - name: Send failure notification
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ GitOps deployment failed! Check workflow run for details.'
-            })
+    - name: Send failure notification
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ GitOps deployment failed! Check workflow run for details.'
+          })
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
