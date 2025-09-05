@@ -1,7 +1,7 @@
 Flask==2.3.3
 Flask-CORS==4.0.0
-opencv-python
-pyzbar
+opencv-python==4.8.1.78
+pyzbar==0.1.9
 qrcode[pil]==7.4.2
 Pillow==10.0.1
 Werkzeug==2.3.7
