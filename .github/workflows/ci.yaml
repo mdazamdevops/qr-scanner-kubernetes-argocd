@@ -196,29 +196,27 @@ jobs:
           echo '${{ secrets.MINIKUBE_CLIENT_CRT }}' | base64 -d > /tmp/minikube-certs/client.crt
           echo '${{ secrets.MINIKUBE_CLIENT_KEY }}' | base64 -d > /tmp/minikube-certs/client.key
 
-          # Create kubeconfig file
+          # Create kubeconfig file using echo commands instead of heredoc
           mkdir -p ~/.kube
-          cat > ~/.kube/config << EOF
-apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority: /tmp/minikube-certs/ca.crt
-    server: https://192.168.49.2:8443
-  name: minikube
-contexts:
-- context:
-    cluster: minikube
-    user: minikube
-  name: minikube
-current-context: minikube
-kind: Config
-preferences: {}
-users:
-- name: minikube
-  user:
-    client-certificate: /tmp/minikube-certs/client.crt
-    client-key: /tmp/minikube-certs/client.key
-EOF
+          echo "apiVersion: v1" > ~/.kube/config
+          echo "clusters:" >> ~/.kube/config
+          echo "- cluster:" >> ~/.kube/config
+          echo "    certificate-authority: /tmp/minikube-certs/ca.crt" >> ~/.kube/config
+          echo "    server: https://192.168.49.2:8443" >> ~/.kube/config
+          echo "  name: minikube" >> ~/.kube/config
+          echo "contexts:" >> ~/.kube/config
+          echo "- context:" >> ~/.kube/config
+          echo "    cluster: minikube" >> ~/.kube/config
+          echo "    user: minikube" >> ~/.kube/config
+          echo "  name: minikube" >> ~/.kube/config
+          echo "current-context: minikube" >> ~/.kube/config
+          echo "kind: Config" >> ~/.kube/config
+          echo "preferences: {}" >> ~/.kube/config
+          echo "users:" >> ~/.kube/config
+          echo "- name: minikube" >> ~/.kube/config
+          echo "  user:" >> ~/.kube/config
+          echo "    client-certificate: /tmp/minikube-certs/client.crt" >> ~/.kube/config
+          echo "    client-key: /tmp/minikube-certs/client.key" >> ~/.kube/config
 
           chmod 600 ~/.kube/config
           echo "✅ Minikube kubeconfig created successfully"
@@ -269,29 +267,27 @@ EOF
           echo '${{ secrets.MINIKUBE_CLIENT_CRT }}' | base64 -d > /tmp/minikube-certs/client.crt
           echo '${{ secrets.MINIKUBE_CLIENT_KEY }}' | base64 -d > /tmp/minikube-certs/client.key
 
-          # Create kubeconfig file
+          # Create kubeconfig file using echo commands
           mkdir -p ~/.kube
-          cat > ~/.kube/config << EOF
-apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority: /tmp/minikube-certs/ca.crt
-    server: https://192.168.49.2:8443
-  name: minikube
-contexts:
-- context:
-    cluster: minikube
-    user: minikube
-  name: minikube
-current-context: minikube
-kind: Config
-preferences: {}
-users:
-- name: minikube
-  user:
-    client-certificate: /tmp/minikube-certs/client.crt
-    client-key: /tmp/minikube-certs/client.key
-EOF
+          echo "apiVersion: v1" > ~/.kube/config
+          echo "clusters:" >> ~/.kube/config
+          echo "- cluster:" >> ~/.kube/config
+          echo "    certificate-authority: /tmp/minikube-certs/ca.crt" >> ~/.kube/config
+          echo "    server: https://192.168.49.2:8443" >> ~/.kube/config
+          echo "  name: minikube" >> ~/.kube/config
+          echo "contexts:" >> ~/.kube/config
+          echo "- context:" >> ~/.kube/config
+          echo "    cluster: minikube" >> ~/.kube/config
+          echo "    user: minikube" >> ~/.kube/config
+          echo "  name: minikube" >> ~/.kube/config
+          echo "current-context: minikube" >> ~/.kube/config
+          echo "kind: Config" >> ~/.kube/config
+          echo "preferences: {}" >> ~/.kube/config
+          echo "users:" >> ~/.kube/config
+          echo "- name: minikube" >> ~/.kube/config
+          echo "  user:" >> ~/.kube/config
+          echo "    client-certificate: /tmp/minikube-certs/client.crt" >> ~/.kube/config
+          echo "    client-key: /tmp/minikube-certs/client.key" >> ~/.kube/config
 
           chmod 600 ~/.kube/config
           echo "✅ Minikube kubeconfig created"
