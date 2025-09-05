@@ -14,8 +14,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE_NAME: qr-scanner-backend
-  FRONTEND_IMAGE_NAME: qr-scanner-frontend
+  IMAGE_NAME: ${{ github.repository }}
   CLUSTER_NAME: qr-scanner-cluster
   NAMESPACE: qr-scanner-app
   ARGOCD_NAMESPACE: argocd
@@ -29,53 +28,54 @@ jobs:
         working-directory: ./backend
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: './backend/requirements.txt'
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        cache-dependency-path: './backend/requirements.txt'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libzbar0 libzbar-dev
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libzbar0 libzbar-dev
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov flask-testing
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov flask-testing
 
-      - name: Create test directory structure
-        run: |
-          mkdir -p tests database
-          touch database/qr_scanner.db
-          chmod 755 database/qr_scanner.db
-          
-          if [ ! -f tests/__init__.py ]; then
-            touch tests/__init__.py
-          fi
-          if [ ! -f tests/test_smoke.py ]; then
-            echo "def test_basic():" > tests/test_smoke.py
-            echo "    assert 1 + 1 == 2" >> tests/test_smoke.py
-          fi
+    - name: Create test directory structure
+      run: |
+        mkdir -p tests database
+        touch database/qr_scanner.db
+        chmod 755 database/qr_scanner.db
+        
+        # Create basic test files without heredoc
+        if [ ! -f tests/__init__.py ]; then
+          touch tests/__init__.py
+        fi
+        if [ ! -f tests/test_smoke.py ]; then
+          echo "def test_basic():" > tests/test_smoke.py
+          echo "    assert 1 + 1 == 2" >> tests/test_smoke.py
+        fi
 
-      - name: Run tests with coverage
-        run: |
-          export TESTING=true
-          python -m pytest tests/ -v --cov=. --cov-report=xml --tb=short || echo "Tests completed"
+    - name: Run tests with coverage
+      run: |
+        export TESTING=true
+        python -m pytest tests/ -v --cov=. --cov-report=xml --tb=short || echo "Tests completed"
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./backend/coverage.xml
-          flags: backend_unittests
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./backend/coverage.xml
+        flags: backend_unittests
 
   test-frontend:
     name: Test Frontend
@@ -85,163 +85,120 @@ jobs:
         working-directory: ./frontend
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+    - name: Set up Node.js 20
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Run security audit
-        run: npm audit --audit-level moderate || true
+    - name: Run security audit
+      run: npm audit --audit-level moderate || true
 
-      - name: Run tests
-        run: |
-          mkdir -p tests
-          echo "test('basic test', () => { expect(1 + 1).toBe(2); });" > tests/example.test.js
-          
-          if ! npm list jest >/dev/null 2>&1; then
-            npm install --save-dev jest
-          fi
-          npx jest --passWithNoTests --coverage
+    - name: Run tests
+      run: |
+        mkdir -p tests
+        echo "test('basic test', () => { expect(1 + 1).toBe(2); });" > tests/example.test.js
+        
+        if ! npm list jest >/dev/null 2>&1; then
+          npm install --save-dev jest
+        fi
+        npx jest --passWithNoTests --coverage
 
   build-and-scan:
-    name: Build and Push Images
+    name: Build and Scan Images
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    permissions:
-      contents: read
-      packages: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Backend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag
+          type=sha,format=long
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push Frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:main
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+    - name: Build and push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
 
-  check-kubeconfig:
-    name: Check Kubernetes Configuration
-    needs: build-and-scan
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
-    outputs:
-      kubeconfig_available: ${{ steps.check-secret.outputs.kubeconfig_available }}
-
-    steps:
-      - name: Check if KUBE_CONFIG secret is set
-        id: check-secret
-        run: |
-          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
-            echo "✅ KUBE_CONFIG secret is available"
-            echo "kubeconfig_available=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ KUBE_CONFIG secret is not set or empty"
-            echo "kubeconfig_available=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Show setup instructions
-        if: steps.check-secret.outputs.kubeconfig_available == 'false'
-        run: |
-          echo "## 🔧 Setup Required"
-          echo "Please add your Kubernetes cluster configuration to GitHub Secrets:"
-          echo ""
-          echo "1. Get your kubeconfig:"
-          echo "   kubectl config view --minify --raw"
-          echo ""
-          echo "2. Go to GitHub Repository → Settings → Secrets → Actions"
-          echo "3. Add a new secret named 'KUBE_CONFIG' with your kubeconfig content"
-          echo ""
-          echo "4. Also make sure ArgoCD is configured with your GitHub repository"
-          echo "   - Access ArgoCD dashboard"
-          echo "   - Go to Settings → Repositories"
-          echo "   - Connect your GitHub repo"
+    - name: Build and push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64
 
   deploy-argocd:
     name: Deploy to ArgoCD
-    needs: [build-and-scan, check-kubeconfig]
+    needs: build-and-scan
     runs-on: ubuntu-latest
-    if: needs.check-kubeconfig.outputs.kubeconfig_available == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Kubernetes tools
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
+    - name: Set up Kubernetes tools
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        kubectl version --client
 
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo '${{ secrets.KUBE_CONFIG }}' > ~/.kube/config
-          chmod 600 ~/.kube/config
-          
-          echo "Testing cluster connection..."
-          kubectl cluster-info --request-timeout=10s || echo "⚠️ Cluster connection test failed"
+    - name: Deploy ArgoCD Application
+      run: |
+        kubectl apply -f argocd/application.yaml --namespace=${{ env.ARGOCD_NAMESPACE }} || true
+        sleep 10
+        kubectl get application -n ${{ env.ARGOCD_NAMESPACE }}
+      env:
+        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
-      - name: Deploy ArgoCD Application
-        run: |
-          kubectl apply -f argocd/application.yaml --namespace=${{ env.ARGOCD_NAMESPACE }} --validate=false
-          sleep 10
-          kubectl get application -n ${{ env.ARGOCD_NAMESPACE }} || echo "Unable to get applications"
-
-      - name: Sync ArgoCD Application
-        run: |
-          kubectl patch app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "true"}}}' --type=merge --validate=false || true
-          
-          # Wait for sync
-          timeout 180s bash -c '
-            while true; do
-              sync_status=$(kubectl get app qr-scanner-app -n argocd -o jsonpath="{.status.sync.status}" 2>/dev/null || echo "Unknown")
-              echo "Sync status: $sync_status"
-              [ "$sync_status" = "Synced" ] && break
-              sleep 10
-            done
-          ' || echo "Sync may still be in progress"
-          
-          kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o wide
+    - name: Sync ArgoCD Application
+      run: |
+        kubectl patch app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -p '{"metadata": {"annotations": {"argocd.argoproj.io/refresh": "true"}}}' --type=merge || true
+        timeout 120s bash -c 'while ! kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o jsonpath="{.status.sync.status}" | grep -q "Synced"; do sleep 5; echo "Waiting for sync..."; done'
+        kubectl get app qr-scanner-app -n ${{ env.ARGOCD_NAMESPACE }} -o wide
+      env:
+        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
   verify-deployment:
     name: Verify Deployment
@@ -250,69 +207,56 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Kubernetes tools
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
+    - name: Set up Kubernetes tools
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo '${{ secrets.KUBE_CONFIG }}' > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Verify deployment status
-        run: |
-          kubectl wait --for=condition=ready pod -l app=backend -n ${{ env.NAMESPACE }} --timeout=300s --validate=false || echo "Backend pods not ready"
-          kubectl wait --for=condition=ready pod -l app=frontend -n ${{ env.NAMESPACE }} --timeout=300s --validate=false || echo "Frontend pods not ready"
-          
-          kubectl get all -n ${{ env.NAMESPACE }} --validate=false
+    - name: Verify deployment status
+      run: |
+        kubectl wait --for=condition=ready pod -l app=backend -n ${{ env.NAMESPACE }} --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=frontend -n ${{ env.NAMESPACE }} --timeout=300s
+        kubectl get all -n ${{ env.NAMESPACE }}
+        
+        kubectl port-forward svc/backend-service -n ${{ env.NAMESPACE }} 5000:80 &
+        sleep 5
+        curl -f http://localhost:5000/health || echo "Health check failed but continuing..."
+      env:
+        KUBECONFIG: ${{ secrets.KUBE_CONFIG }}
 
   notification:
     name: Send Notifications
-    needs: [verify-deployment, build-and-scan, test-backend, test-frontend, check-kubeconfig]
+    needs: [verify-deployment, build-and-scan, test-backend, test-frontend]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
-      - name: Send success notification
-        if: success()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ GitOps deployment successful! Application deployed via ArgoCD.'
-            })
+    - name: Send success notification
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ GitOps deployment successful! Application deployed via ArgoCD.'
+          })
 
-      - name: Send failure notification
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ GitOps deployment failed! Check workflow run for details.'
-            })
-
-      - name: Send setup reminder
-        if: needs.check-kubeconfig.outputs.kubeconfig_available == 'false'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '⚠️ Setup required: Please add KUBE_CONFIG secret to GitHub Secrets and configure ArgoCD with your repository.'
-            })
+    - name: Send failure notification
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ GitOps deployment failed! Check workflow run for details.'
+          })
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
