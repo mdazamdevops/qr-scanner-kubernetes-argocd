@@ -11,6 +11,11 @@ def test_login_page(client):
     """Test login page loads"""
     response = client.get('/login')
     assert response.status_code == 200
+
+def test_login_page(client):
+    """Test login page loads"""
+    response = client.get('/login')
+    assert response.status_code == 200
     # Should contain login form elements
     assert b'form' in response.data
     assert b'username' in response.data or b'login' in response.data

@@ -14,6 +14,13 @@ def test_health_endpoint(client):
     assert response.json['status'] == 'healthy'
     assert 'service' in response.json
 
+def test_health_endpoint(client):
+    """Test health endpoint returns 200"""
+    response = client.get('/health')
+    assert response.status_code == 200
+    assert response.json['status'] == 'healthy'
+    assert 'service' in response.json
+
 def test_api_info_endpoint(client):
     """Test API info endpoint returns correct structure"""
     response = client.get('/api/info')
