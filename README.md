@@ -18,20 +18,6 @@ This project demonstrates a complete GitOps workflow where:
 - **GitHub Actions** automates testing, building, and container management
 - **Kubernetes** provides the deployment platform with zero downtime
 
-## Architecture
-
-```
-mermaid
-graph TB
-    A[Developer] --> B[Git Push to GitHub]
-    B --> C[GitHub Actions CI/CD]
-    C --> D[Build & Push to GHCR]
-    D --> E[ArgoCD Detects Changes]
-    E --> F[Auto-Sync Kubernetes]
-    F --> G[Application Deployed]
-    G --> H[Health Monitoring]
-    H --> E
-   ``` 
 ## Project Structure
 ```
 qr-scanner-argocd-gitops/
