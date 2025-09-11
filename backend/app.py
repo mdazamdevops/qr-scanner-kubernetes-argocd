@@ -55,7 +55,7 @@ def create_app():
     
     return app
 
-# This line creates the 'app' instance that your WSGI server (Gunicorn) looks for.
+
 app = create_app()
 
 if __name__ == '__main__':
